@@ -1,0 +1,107 @@
+import tkinter as tk
+import pyperclip
+from googletrans import Translator
+import keyboard
+
+def translate_text(text, dest='en'):
+    translator = Translator()
+    try:
+        translated = translator.translate(text, dest=dest).text
+    except Exception as e:
+        print(f"Translation Error: {e}")
+        translated = text
+    return translated
+
+def check_clipboard():
+    global clipboard_text
+    new_clipboard_text = pyperclip.paste()
+    if new_clipboard_text != clipboard_text:
+        clipboard_text = new_clipboard_text
+        dest_language = target_language.get()
+        translated_text = translate_text(clipboard_text, dest=dest_language)
+        output_text.delete('1.0', tk.END)
+        output_text.insert(tk.END, translated_text)
+        global translated_text_var
+        translated_text_var = translated_text
+
+        # 更新字數統計
+        word_count = len(translated_text.split())
+        input_word_count_label.config(text=f"字數統計：{word_count}")
+
+    root.after(1000, check_clipboard)
+
+def read_and_copy_translated_text():
+    global translated_text_var
+    translated_text = translated_text_var
+    if translated_text:
+        pyperclip.copy(translated_text)
+        status_label.config(text="翻譯後文本已複製到剪貼簿", fg="green")
+        root.after(3000, clear_status_label)  # 在3秒後清除通知
+    else:
+        status_label.config(text="沒有翻譯後文本可複製", fg="red")
+        root.after(3000, clear_status_label)  # 在3秒後清除通知
+
+def copy_to_clipboard(event=None):
+    global translated_text_var
+    translated_text = translated_text_var
+    if translated_text:
+        pyperclip.copy(translated_text)
+        status_label.config(text="翻譯後文本已複製到剪貼簿", fg="green")
+        root.after(3000, clear_status_label)  # 在3秒後清除通知
+    else:
+        status_label.config(text="沒有翻譯後文本可複製", fg="red")
+        root.after(3000, clear_status_label)  # 在3秒後清除通知
+
+def update_input_word_count(event=None):
+    input_text = output_text.get("1.0", tk.END)
+    word_count = len(input_text.split())
+    input_word_count_label.config(text=f"字數統計：{word_count}")
+
+def clear_status_label():
+    status_label.config(text="", fg="black")
+
+root = tk.Tk()
+root.title('Text Translator')
+
+target_language = tk.StringVar()
+
+target_label = tk.Label(root, text="目標語言:")
+target_label.grid(row=0, column=0, padx=5, pady=5)
+
+target_menu = tk.OptionMenu(root, target_language, 'en', 'zh-TW', 'zh-CN')
+target_menu.grid(row=0, column=1, padx=5, pady=5)
+
+output_text = tk.Text(root, width=40, height=10)
+output_text.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+
+clipboard_text = pyperclip.paste()
+check_clipboard()
+
+# 綁定 ALT+C 快捷鍵事件
+root.bind("<Alt-c>", copy_to_clipboard)
+
+status_label = tk.Label(root, text="", fg="black")
+status_label.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+translated_text_var = ""
+
+copy_button = tk.Button(root, text="複製到剪貼簿 (Alt+C)", command=read_and_copy_translated_text)
+copy_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+# 新增快捷鍵提示
+shortcut_label = tk.Label(root, text="(按 Alt + C 進行複製)", fg="gray")
+shortcut_label.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+
+# 新增翻譯進度提示
+translate_progress_label = tk.Label(root, text="", fg="blue")
+translate_progress_label.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+
+# 新增字數統計功能
+input_word_count_label = tk.Label(root, text="字數統計：0")
+input_word_count_label.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+output_text.bind("<KeyRelease>", update_input_word_count)
+
+# 新增全域按鍵監聽
+keyboard.add_hotkey("alt+c", read_and_copy_translated_text)
+
+root.mainloop()
